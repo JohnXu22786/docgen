@@ -4,3 +4,13 @@ __pycache__/
 
 # 测试临时产物
 .coverage
+
+# Node / npm
+node_modules/
+*.tgz
+*.log
+npm-debug.log*
+
+# 通用
+.DS_Store
+.venv/
