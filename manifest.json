@@ -1,0 +1,51 @@
+{
+  "id": "docgen",
+  "name": "docgen",
+  "version": "1.0.0",
+  "kind": "skill-pack",
+  "description": "文档工坊：一组纯提示词的文档生成技能，覆盖 README 生成、PR 描述、changelog 与代码审查。",
+  "entry": "SKILLS.md",
+  "interface": {
+    "type": "agent-skills",
+    "version": "0.1",
+    "discovery": "filesystem: 技能根目录下的 <name>/SKILL.md 或 <name>.md（一层深度）",
+    "frontmatter": [
+      "name",
+      "description",
+      "whenToUse",
+      "metadata",
+      "license",
+      "compatibility",
+      "allowed-tools"
+    ],
+    "invocation": "模型目录与用户命令目录默认均开放（可依 harness 支持在 frontmatter 补充 disable-model-invocation / user-invocable）"
+  },
+  "skills": [
+    {
+      "name": "readme-forge",
+      "path": "skills/readme-forge/SKILL.md",
+      "description": "从代码库生成或重写 README.md 项目文档"
+    },
+    {
+      "name": "pr-dossier",
+      "path": "skills/pr-dossier/SKILL.md",
+      "description": "从 diff 与提交历史生成完整的 PR 描述（变更档案）"
+    },
+    {
+      "name": "changelog-curator",
+      "path": "skills/changelog-curator/SKILL.md",
+      "description": "从 git 提交历史生成与维护 CHANGELOG"
+    },
+    {
+      "name": "diff-verdict",
+      "path": "skills/diff-verdict/SKILL.md",
+      "description": "对代码改动输出结构化审查意见（结论 + 分级问题清单）"
+    }
+  ],
+  "scripts": {
+    "validate": "python scripts/validate_skills.py"
+  },
+  "requires": [],
+  "license": "MIT",
+  "author": "docgen contributors"
+}

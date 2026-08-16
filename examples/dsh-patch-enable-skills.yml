@@ -1,0 +1,21 @@
+# docgen 接入补丁（dsh）
+#
+# 作用：
+#   1. 启用 dsh web profile 默认关闭的技能相关组件（headless profile 默认已开启）；
+#   2. 把本插件的 skills/ 目录登记为技能根目录（customSkillDirs），免拷贝接入。
+#
+# 用法（在 docgen 插件目录内执行）：
+#   npx @deepseek-ai/dsh web --patch ./examples/dsh-patch-enable-skills.yml
+#
+# 说明：
+#   - 配置键路径与 web 组件的默认开关随版本演进，接入后请用
+#     `dsh --dump-config` 核对生效结果；
+#   - 若你使用 headless profile 或已把技能拷入项目/用户技能根目录，
+#     则本补丁不是必需（可只保留 customSkillDirs 部分或删去本文件）。
+- id: skill-filesystem
+  disabled: false
+  config:
+    customSkillDirs:
+      - ./skills
+- id: tool-skill
+  disabled: false

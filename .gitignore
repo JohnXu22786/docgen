@@ -1,0 +1,6 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 测试临时产物
+.coverage
