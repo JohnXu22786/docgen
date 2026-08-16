@@ -93,10 +93,20 @@ class ParseFrontmatterTests(unittest.TestCase):
         self.assertEqual(data["name"], "alpha")
         self.assertEqual(data["description"], "描述 文本")
 
+    def test_list_and_empty_map_scalars(self):
+        text = "---\nname: alpha\ntags: [a, b, c]\nempty:\n---\n正文\n"
+        data = vs.parse_frontmatter(text)
+        self.assertEqual(data["tags"], ["a", "b", "c"])
+        self.assertEqual(data["empty"], {})
+
+    def test_quoted_value_with_inner_colon(self):
+        text = '---\nname: alpha\ndescription: "说明：冒号在引号内"\n---\n正文\n'
+        self.assertEqual(vs.parse_frontmatter(text)["description"], "说明：冒号在引号内")
+
 
 class NameRuleTests(unittest.TestCase):
     def test_name_rules(self):
-        valid = ["alpha", "readme-forge", "a1-b2-c3", "changelog-curator"]
+        valid = ["alpha", "readme-forge", "a1-b2-c3", "changelog-curator", "1abc"]
         for n in valid:
             self.assertIsNone(vs.name_problem(n), n)
         invalid = [
@@ -105,6 +115,7 @@ class NameRuleTests(unittest.TestCase):
             "alpha-",       # 以连字符结尾
             "alpha--beta",  # 连续连字符
             "alpha_beta",   # 下划线
+            "alpha.beta",   # 点
             "a" * 65,       # 超长
             "",             # 空
         ]
@@ -167,6 +178,16 @@ class ValidateSkillTests(unittest.TestCase):
         d = make_skill(self.root, "alpha")
         (d / "SKILL.md").write_text(
             "---\nname: alpha\ndescription: 描述。\nwhenToUse: [1, 2]\n---\n正文\n",
+            encoding="utf-8",
+        )
+        issues = vs.validate_skill_dir(d)
+        self.assertTrue(any("whenToUse" in i for i in issues))
+
+    def test_empty_when_to_use_value_fails(self):
+        # `whenToUse:` 空值被解析为空映射 {}，同样触发字段类型检查
+        d = make_skill(self.root, "alpha")
+        (d / "SKILL.md").write_text(
+            "---\nname: alpha\ndescription: 描述。\nwhenToUse:\n---\n正文\n",
             encoding="utf-8",
         )
         issues = vs.validate_skill_dir(d)
@@ -268,6 +289,15 @@ class RootScanTests(unittest.TestCase):
         (self.root / "plain-dir").mkdir()
         make_skill(self.root, "alpha")
         self.assertEqual(vs.validate_skills_root(self.root), [])
+
+    def test_uppercase_md_extension_is_picked_up(self):
+        p = self.root / "gamma.MD"
+        p.write_text(
+            "---\nname: gamma\ndescription: 大写扩展名。\n---\n# 正文\n",
+            encoding="utf-8",
+        )
+        issues = vs.validate_skills_root(self.root)
+        self.assertEqual(issues, [])
 
     def test_missing_root_is_an_error(self):
         missing = self.root / "nope"
