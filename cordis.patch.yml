@@ -1,0 +1,16 @@
+# dsh-docgen bundle layer.
+#
+# This patch inserts one Cordis plugin row into the profile. The row's `name`
+# is this package's npm name; dsh resolves it through the profile's installed
+# packages and loads the module's named exports ({ name, inject, apply }),
+# which register the pack's skills on ctx.skills (see index.js).
+#
+# Activated automatically by:
+#   dsh plugin --profile <name> add github:JohnXu22786/docgen
+#
+# File-based discovery without the plugin loader keeps working: enable the
+# skill components and point customSkillDirs at ./skills, as shown in
+# examples/dsh-patch-enable-skills.yml.
+- insert:
+    - id: docgen
+      name: dsh-docgen
