@@ -20,6 +20,9 @@ Each skill is a **self-contained single `SKILL.md`**: the body contains input-co
 ```
 docgen/
 ├── README.md                     # this document: installation, usage, interface
+├── package.json                  # npm manifest: name (dsh-docgen) + dsh.bundle
+├── cordis.patch.yml              # bundle patch consumed by `dsh plugin` installs
+├── index.js                      # skill-mount adapter (registers skills/ onto ctx.skills)
 ├── manifest.json                 # plugin manifest (self-describing metadata)
 ├── SKILLS.md                     # entry index file
 ├── LICENSE                       # MIT license
@@ -34,22 +37,40 @@ docgen/
 ├── scripts/
 │   └── validate_skills.py        # skill-pack validation script (Python standard library, no dependencies)
 └── tests/
-    └── test_validate_skills.py   # regression tests for the validation script
+    ├── test_validate_skills.py   # regression tests for the validation script
+    └── index.test.mjs            # node smoke tests for the skill-mount adapter
 ```
 
 ## Installing in DSH
+
+docgen ships a `dsh.bundle` manifest, so it installs and activates with the plugin
+loader:
 
 ```bash
 dsh plugin --profile demo add github:JohnXu22786/docgen
 ```
 
-The exact wiring also depends on which profile the skill components are enabled in (see "Installation and dsh integration" below).
+The bundle inserts a plugin row (`id: docgen`, `name: dsh-docgen`) that resolves this
+package's entry (`index.js`); its `apply(ctx)` scans the bundled `skills/` directory and
+registers every `SKILL.md` onto `ctx.skills` at runtime — no copying, no extra config.
+The file-based integration paths below remain available for harnesses or profiles where
+the `skills` service or skill components are not loaded.
 
 ## Installation and dsh integration
 
 dsh discovers skills through the `skill-filesystem` provider by **skills root directory** (one level deep: directory bundles `<root>/<name>/SKILL.md` or flat files `<root>/<name>.md`). Pick any one of the following ways to integrate this pack:
 
-### Way one: project-level (recommended, zero config)
+### Way zero: plugin loader (dsh.bundle, recommended)
+
+```bash
+dsh plugin --profile demo add github:JohnXu22786/docgen
+```
+
+The bundle's entry (`index.js`) registers the four `skills/` entries onto `ctx.skills`
+at load time. This is the one-step path; the ways below are for manual or file-based
+integration.
+
+### Way one: project-level (zero config, no plugin loader)
 
 Put the four skill directories under `skills/` (or the whole `skills/`) into the project's skills root:
 
@@ -82,6 +103,7 @@ npx @deepseek-ai/dsh web --patch ./examples/dsh-patch-enable-skills.yml
 python scripts/validate_skills.py            # validates this pack's skill format (exit code 0 when all pass)
 python scripts/validate_skills.py --strict   # additionally checks the body line-count cap
 python -m unittest discover -s tests -t .    # runs the validation script's own regression tests
+npm test                                     # runs the skill-mount adapter's node smoke tests
 ```
 
 After integration, just make natural-language requests in a session and the model loads the matching skill via the `skill` tool:
@@ -120,6 +142,7 @@ dsh additionally recognizes (not written in this pack, defaults apply): `disable
 
 ### Plugin manifest and entry
 
+- `package.json` + `cordis.patch.yml`: the `dsh.bundle` manifest consumed by [`dsh plugin add`](https://github.com/deepseek-ai/deepseek-harness). During install, dsh reads `cordis.patch.yml`, inserts the `docgen` plugin row, and loads `index.js` — whose `apply(ctx)` registers the bundled skills onto `ctx.skills` (`name` / `description` / `whenToUse` / `content` / `metadata` / `source: bundled`) and returns a disposer that unregisters them on unload.
 - `manifest.json`: the plugin's self-describing metadata (id / version / kind / entry / interface / skills / scripts). dsh's skill discovery does not read it; it serves human reference, publishing flows, and harnesses that support "entry file" style loaders; the `interface` field declares the skill-discovery contract.
 - `SKILLS.md`: entry index listing the loading-contract summary and the skill list.
 

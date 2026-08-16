@@ -20,6 +20,9 @@
 ```
 docgen/
 ├── README.md                     # 本文档：安装、使用、接口说明
+├── package.json                  # npm 清单：name（dsh-docgen）+ dsh.bundle
+├── cordis.patch.yml              # `dsh plugin` 安装时消费的 bundle 补丁
+├── index.js                      # 技能挂载适配（把 skills/ 注册到 ctx.skills）
 ├── manifest.json                 # 插件清单（自描述元数据）
 ├── SKILLS.md                     # 入口索引文件
 ├── LICENSE                       # MIT 许可
@@ -34,22 +37,37 @@ docgen/
 ├── scripts/
 │   └── validate_skills.py        # 技能包校验脚本（Python 标准库，无依赖）
 └── tests/
-    └── test_validate_skills.py   # 校验脚本的回归测试
+    ├── test_validate_skills.py   # 校验脚本的回归测试
+    └── index.test.mjs            # 技能挂载适配的 node 冒烟测试
 ```
 
 ## 在 DSH 中安装
+
+docgen 随包携带 `dsh.bundle` 清单，用插件加载器一条命令安装并启用：
 
 ```bash
 dsh plugin --profile demo add github:JohnXu22786/docgen
 ```
 
-dsh 通过插件管理命令按仓库安装并登记本技能包（技能组件的启用情况取决于 profile，见下文「安装与接入 dsh」）。
+bundle 会把插件行（`id: docgen`、`name: dsh-docgen`）插入 profile，解析本包入口
+（`index.js`）；其 `apply(ctx)` 扫描 `skills/` 目录并把每个 `SKILL.md` 运行时注册到
+`ctx.skills`——无需拷贝、无需额外配置。文件式接入方式仍然可用，适用于未加载
+`skills` 服务或技能组件的 profile。
 
 ## 安装与接入 dsh
 
 dsh 通过 `skill-filesystem` 提供方按**技能根目录**发现技能（一层深度：目录束 `<root>/<name>/SKILL.md` 或平铺文件 `<root>/<name>.md`）。接入本插件任选一种方式：
 
-### 方式一：项目级（推荐，零配置）
+### 方式零：插件加载器（dsh.bundle，推荐）
+
+```bash
+dsh plugin --profile demo add github:JohnXu22786/docgen
+```
+
+bundle 入口（`index.js`）在加载时把 `skills/` 下四个目录束注册到 `ctx.skills`。
+这是单步接入；下述方式适用于手工或文件式集成。
+
+### 方式一：项目级（零配置，不用插件加载器）
 
 把 `skills/` 下的四个技能目录（或整个 `skills/`）放进项目的技能根目录：
 
@@ -82,6 +100,7 @@ npx @deepseek-ai/dsh web --patch ./examples/dsh-patch-enable-skills.yml
 python scripts/validate_skills.py            # 校验本包技能格式（全部通过则退出码 0）
 python scripts/validate_skills.py --strict   # 追加正文行数上限检查
 python -m unittest discover -s tests -t .    # 运行校验脚本自身的回归测试
+npm test                                     # 运行技能挂载适配的 node 冒烟测试
 ```
 
 接入后在会话中直接以自然语言发起请求即可，模型会通过 `skill` 工具加载对应技能：
@@ -120,6 +139,7 @@ dsh 额外识别（本包不写、按默认处理）：`disable-model-invocation
 
 ### 插件清单与入口
 
+- `package.json` + `cordis.patch.yml`：`dsh plugin add` 消费的 `dsh.bundle` 清单。安装时 dsh 读取 `cordis.patch.yml` 插入 `docgen` 插件行并加载 `index.js`——其 `apply(ctx)` 把技能注册到 `ctx.skills`（`name` / `description` / `whenToUse` / `content` / `metadata` / `source: bundled`），返回的组合 disposer 在卸载时逆序注销全部注册。
 - `manifest.json`：插件的自描述元数据（id / version / kind / entry / interface / skills / scripts）。dsh 的技能发现不读取它，它服务于人工查阅、发布流程与支持「入口文件」型加载器的 harness；`interface` 字段声明了技能发现契约。
 - `SKILLS.md`：入口索引，列出加载契约摘要与技能清单。
 
